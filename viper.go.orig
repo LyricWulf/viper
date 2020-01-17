@@ -34,8 +34,6 @@ import (
 	"sync"
 	"time"
 
-	yaml "gopkg.in/yaml.v2"
-
 	"github.com/fsnotify/fsnotify"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/printer"
@@ -48,6 +46,7 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/subosito/gotenv"
 	"gopkg.in/ini.v1"
+	"gopkg.in/yaml.v2"
 )
 
 // ConfigMarshalError happens when failing to marshal the configuration.
@@ -550,7 +549,6 @@ func (v *Viper) providerPathExists(p *defaultRemoteProvider) bool {
 
 // searchMap recursively searches for a value for path in source map.
 // Returns nil if not found.
-// Note: This assumes that the path entries and map keys are lower cased.
 func (v *Viper) searchMap(source map[string]interface{}, path []string) interface{} {
 	if len(path) == 0 {
 		return source
@@ -726,8 +724,13 @@ func GetViper() *Viper {
 // Get returns an interface. For a specific value use one of the Get____ methods.
 func Get(key string) interface{} { return v.Get(key) }
 func (v *Viper) Get(key string) interface{} {
+<<<<<<< HEAD
+	lcaseKey := strings.ToLower(key)
+	val := v.find(lcaseKey, true)
+=======
 	casedKey := v.caseKey(key)
 	val := v.find(casedKey)
+>>>>>>> dbe6d247ea9cdab35bc00bbb45d06248b5c2084f
 	if val == nil {
 		return nil
 	}
@@ -1034,10 +1037,20 @@ func (v *Viper) BindEnv(input ...string) error {
 // Given a key, find the value.
 //
 // Viper will check to see if an alias exists first.
+<<<<<<< HEAD
+// Viper will then check in the following order:
+// flag, env, config file, key/value store.
+// Lastly, if no value was found and flagDefault is true, and if the key
+// corresponds to a flag, the flag's default value is returned.
+//
+// Note: this assumes a lower-cased key given.
+func (v *Viper) find(lcaseKey string, flagDefault bool) interface{} {
+=======
 // Note: By default, this assumes that a lowercase key is given.
 // This behavior can be modified with viper.SetKeysCaseSensitive.
 func (v *Viper) find(key string) interface{} {
 
+>>>>>>> dbe6d247ea9cdab35bc00bbb45d06248b5c2084f
 	var (
 		val    interface{}
 		exists bool
@@ -1138,7 +1151,8 @@ func (v *Viper) find(key string) interface{} {
 		return nil
 	}
 
-	/* if flagDefault {
+<<<<<<< HEAD
+	if flagDefault {
 		// last chance: if no value is found and a flag does exist for the key,
 		// get the flag's default value even if the flag's value has not been set.
 		if flag, exists := v.pflags[lcaseKey]; exists {
@@ -1160,9 +1174,26 @@ func (v *Viper) find(key string) interface{} {
 			default:
 				return flag.ValueString()
 			}
+=======
+	// last chance: if no other value is returned and a flag does exist for the value,
+	// get the flag's value even if the flag's value has not changed
+	if flag, exists := v.pflags[key]; exists {
+		switch flag.ValueType() {
+		case "int", "int8", "int16", "int32", "int64":
+			return cast.ToInt(flag.ValueString())
+		case "bool":
+			return cast.ToBool(flag.ValueString())
+		case "stringSlice":
+			s := strings.TrimPrefix(flag.ValueString(), "[")
+			s = strings.TrimSuffix(s, "]")
+			res, _ := readAsCSV(s)
+			return res
+		default:
+			return flag.ValueString()
+>>>>>>> dbe6d247ea9cdab35bc00bbb45d06248b5c2084f
 		}
 		// last item, no need to check shadowing
-	} */
+	}
 
 	return nil
 }
@@ -1181,8 +1212,13 @@ func readAsCSV(val string) ([]string, error) {
 // with viper.SetKeysCaseSensitive.
 func IsSet(key string) bool { return v.IsSet(key) }
 func (v *Viper) IsSet(key string) bool {
+<<<<<<< HEAD
+	lcaseKey := strings.ToLower(key)
+	val := v.find(lcaseKey, false)
+=======
 	casedKey := v.caseKey(key)
 	val := v.find(casedKey)
+>>>>>>> dbe6d247ea9cdab35bc00bbb45d06248b5c2084f
 	return val != nil
 }
 
@@ -1419,7 +1455,6 @@ func (v *Viper) SafeWriteConfigAs(filename string) error {
 	return v.writeConfig(filename, false)
 }
 
-func writeConfig(filename string, force bool) error { return v.writeConfig(filename, force) }
 func (v *Viper) writeConfig(filename string, force bool) error {
 	jww.INFO.Println("Attempting to write configuration to file.")
 	ext := filepath.Ext(filename)
@@ -1539,9 +1574,6 @@ func (v *Viper) unmarshalReader(in io.Reader, c map[string]interface{}) error {
 }
 
 // Marshal a map into Writer.
-func marshalWriter(f afero.File, configType string) error {
-	return v.marshalWriter(f, configType)
-}
 func (v *Viper) marshalWriter(f afero.File, configType string) error {
 	c := v.AllSettings()
 	switch configType {
